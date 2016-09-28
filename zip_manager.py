@@ -42,9 +42,6 @@ class ZipManager(QWidget, zip_wgt.Ui_Form):
         # self.setStyleSheet(stl)
         self.log_btn.setText('Log')
 
-        #variable
-        self.pb = ''
-        
         self.project_cbx.addItem('Select Project')
         self.ast_project_cbx.addItem('Select Project')
         for prj_fld in self.get_projects():
@@ -329,7 +326,10 @@ class Logger(QFrame):
         self.setGeometry(geo)
 
 if __name__ == '__main__':
-    app = QApplication([])
-    arc = ZipManager()
-    arc.show()
-    app.exec_()
+    if not os.path.exists(prj_root):
+        print prj_root
+    else:
+        app = QApplication([])
+        arc = ZipManager()
+        arc.show()
+        app.exec_()
