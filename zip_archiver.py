@@ -1,8 +1,9 @@
 '''
-Author: Dmitry Stabrov
-------------------------------
+
 description: zip archiver class to zip project files for outsource
-------------------------------
+
+author: Dmitry Stabrov
+mailto: fx@dimastabrov.com
 '''
 
 import os

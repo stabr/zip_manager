@@ -1,8 +1,11 @@
+#!/python
+# -*- coding: utf-8 -*-
 '''
-Author: Dmitry Stabrov
-------------------------------
-description: UI manager to archive project files for outsource
-------------------------------
+File manager to archive project files for outsource
+
+author: Dmitry Stabrov
+mailto: fx@dimastabrov.com
+
 '''
 
 import os
@@ -14,17 +17,68 @@ from PySide.QtCore import *
 from PySide.QtGui import *
 
 import zip_archiver
-from wgt import zip_wgt
-
 import setup
-prj_root = setup.config('project_root')
 
-class ZipManager(QWidget, zip_wgt.Ui_Form):
+prj_root = setup.config('project_root')
+print 'prj_root', prj_root
+
+class ZipManager(QWidget):
     """ZipManager"""
     def __init__(self):
         super(ZipManager, self).__init__()
-        self.setupUi(self)
-        self.ast_project_folder = ''
+        # ui
+        self.resize(609, 288)
+        # self.setMinimumSize(QSize(609, 422))
+        self.main_lay = QHBoxLayout()
+        # self.main_lay.setContentsMargins(40, 20, 40, 20)
+        
+        # stl = 'QWidget {color: rgb(210,210,190);background-color:rgb(68,68,68);font: bold 12px;}\
+        #        QPushButton {color: rgb(160,160,160);background-color:rgb(68,68,68);font: bold 12px;}'
+        stl = os.path.join(os.path.dirname(__file__), 'wgt/style.css')
+        self.setStyleSheet(stl)
+
+        self.entitys_lay = QVBoxLayout()       
+        self.shot_lst = QListWidget()
+        self.shot_lst.setMinimumSize(QSize(398, 0))
+        self.shot_lst.setSelectionMode(QAbstractItemView.MultiSelection)
+        self.shot_lst.setMouseTracking(True)
+        self.shot_lst.setToolTip('Entities')
+
+        self.entitys_lay.addWidget(self.shot_lst)
+        self.find_le = FindField(self)
+        self.entitys_lay.addWidget(self.find_le)
+
+        self.button_lay = QVBoxLayout()
+        self.button_lay.setContentsMargins(0, 0, 0, 9)
+        # self.select_btn = QPushButton('Select')
+        # self.select_btn.setMinimumSize(QSize(0, 50))
+        # self.select_btn.setMaximumSize(QSize(100, 50))
+        # self.button_lay.addWidget(self.select_btn)
+        # self.clear_btn = QPushButton('Clear Selection')
+        # self.clear_btn.setMinimumSize(QSize(0, 50))
+        # self.clear_btn.setMaximumSize(QSize(100, 50))
+        # self.button_lay.addWidget(self.clear_btn)
+        self.refresh_btn = QPushButton('Refresh List')
+        self.refresh_btn.setMinimumSize(QSize(0, 50))
+        self.refresh_btn.setMaximumSize(QSize(100, 50))
+        self.button_lay.addWidget(self.refresh_btn)
+        # spacerItem = QSpacerItem(20, 60, QSizePolicy.Minimum, QSizePolicy.Expanding )
+        # self.button_lay.addItem(spacerItem)
+        self.arch_btn = QPushButton('Archive')
+        self.arch_btn.setMinimumSize(QSize(100, 60))
+        self.arch_btn.setMaximumSize(QSize(100, 60))
+        # self.arch_btn.setSizeIncrement(QSize(0, 0))
+        self.button_lay.addWidget(self.arch_btn)
+        self.log_btn = QPushButton('View Log')
+        self.log_btn.setMinimumSize(QSize(0, 25))
+        self.log_btn.setMaximumSize(QSize(100, 35))
+        self.button_lay.addWidget(self.log_btn)
+
+        self.main_lay.addLayout(self.entitys_lay)
+        self.main_lay.addLayout(self.button_lay)
+        self.setLayout(self.main_lay)
+
+        # variables
         self.shot_project_folder = ''
         self.season = ''
         self.sequence = ''
@@ -32,123 +86,72 @@ class ZipManager(QWidget, zip_wgt.Ui_Form):
         self.thread_log = []
         self.selected = False
         self.thread = QThread(self)
-
-        self.shot_lst.setSelectionMode(QAbstractItemView.MultiSelection)
-        self.shot_lst.setMouseTracking(True)
-        self.shot_lst.setToolTip('Entities')
-
-        stl = 'QWidget {color: rgb(210,210,190);background-color:rgb(210,230,240);font: bold 12px;}'\
-              'QPushButton {color: rgb(160,160,160);background-color:rgb(40,40,40);font: bold 12px;}'
-        # self.setStyleSheet(stl)
-        self.log_btn.setText('Log')
-
-        self.project_cbx.addItem('Select Project')
-        self.ast_project_cbx.addItem('Select Project')
-        for prj_fld in self.get_projects():
-            self.project_cbx.addItem(prj_fld)
-            self.ast_project_cbx.addItem(prj_fld)
+        self.data = self.get_data()
 
         #act
-        self.ast_project_cbx.currentIndexChanged.connect(self.get_ast_types)
-        self.ast_type_cbx.currentIndexChanged.connect(self.get_assets)
-        # self.ast_step_cbx.currentIndexChanged.connect(self.get_ast_step)
-
-        self.project_cbx.currentIndexChanged.connect(self.get_seasons)
-        self.season_cbx.currentIndexChanged.connect(self.get_sequences)
-        self.sequence_cbx.currentIndexChanged.connect(self.get_shots)
         # self.find_le.textChanged.connect(self.find_entity)
-        self.find_le.returnPressed.connect(lambda: self.find_entity(self.find_le.text()))
-        self.ast_find_le.returnPressed.connect(lambda: self.find_entity(self.ast_find_le.text()))
-        self.select_btn.clicked.connect(self.filter_selection)
-        self.clear_btn.clicked.connect(self.shot_lst.clearSelection)
-        self.refresh_btn.clicked.connect(self.get_shots)
+
+        self.find_le.returnPressed.connect(self.return_pressed)
+        self.find_le.textChanged.connect(self.find_entity)
+
+        # self.select_btn.clicked.connect(self.filter_selection)
+        # self.clear_btn.clicked.connect(self.shot_lst.clearSelection)
+        # self.refresh_btn.clicked.connect(self.get_shots)
         self.arch_btn.clicked.connect(self.archive)
         # self.log_btn.clicked.connect(lambda:self.thread.exit(0))
         self.log_btn.clicked.connect(self.get_log)
 
-    def get_ast_types(self):
-        self.ast_type_cbx.clear()
-        self.ast_project_folder = self.ast_project_cbx.currentText()
-        project_folder = '/'.join([prj_root, self.ast_project_folder])
-        if not self.ast_project_folder == 'Select Project':
-            self.ast_step_cbx.clear()
-            self.shot_lst.clear()
-            types = '/'.join([prj_root, self.ast_project_folder,'assets'])
-            self.ast_type_cbx.addItems([typ for typ in os.listdir(types) if os.path.isdir('%s/%s'%(types, typ))])
 
-    def get_assets(self):
-        skip = ['def','tex']
-        get_step = True
-        self.shot_lst.clear()
-        self.ast_selected = False
-        self.ast_type = self.ast_type_cbx.currentText()
-        if not self.ast_type:
-            return
-        assets = '/'.join([prj_root, self.ast_project_folder,'assets',self.ast_type])
-        for ast in os.listdir(assets):
-            if not ast[0] == '.':
-                aset = '/'.join([assets,ast])
-                self.setItem(aset)
-                if get_step:
-                    get_step = False
-                    self.ast_step_cbx.clear()
-                    self.ast_step_cbx.addItems([step for step in os.listdir(aset) if step.islower() and not step in skip])
+    def get_data(self):
+        root = 'C:/Users/Me/Pictures/img'
+        data = [file for file in os.listdir(root)]      
+        return data
 
-    def get_projects(self):
-        if os.path.exists(prj_root):
-            return [prj for prj in os.listdir(prj_root) if not prj == 'dev' and not prj.startswith('.')]
+    def _get_data(self):
+        # root = '//bstorage/strg01/mnt/projects'
+        root = amg_config.conf.get('projects_path')
+        data = []
+        for prj in os.listdir(root):
+            path = os.path.join(root, prj, '.dir_cache')
+            if os.path.exists(path):
+                with open(path,'r') as cache:
+                    fullpath = lambda x: os.path.join(root,prj,unicode(x.strip(), errors='ignore')).replace('\\','/')
+                    data += [fullpath(l) for l in cache if l.startswith(self.entity.lower())]
+        return data
+
+    def return_pressed(self):
+        selected = self.shot_lst.selectedItems()
+        if selected:
+            itm = selected[0]
         else:
-            self.thread_log.append(['ERROR::Can`t find any projects here: %s'%prj_root])
-            return []
+            itm = self.shot_lst.item(0)
+        self.path = itm.data(Qt.UserRole).replace('\\','/')
+        self.find_le.setText(itm.text())
+        # print '>> {}'.format(self.path)
 
-    def get_seasons(self):
-        self.shot_project_folder = self.project_cbx.currentText()
-        project_folder = '/'.join([prj_root, self.shot_project_folder])
-        if not self.shot_project_folder == 'Select Project':
-            self.season_cbx.clear()
-            self.sequence_cbx.clear()
-            self.shot_lst.clear()
-            if 'seasons' in os.listdir(project_folder):
-                seqs = '/'.join([prj_root, self.shot_project_folder,'seasons'])
-                self.season_cbx.addItems([sq for sq in os.listdir(seqs) if re.findall('(S\d{2})', sq[-3:])])
-            else:
-                self.get_sequences()
+    def find_entity(self):
 
-    def get_sequences(self):
-        self.shot_project_folder = self.project_cbx.currentText()
-        project_folder = '/'.join([prj_root, self.shot_project_folder])
-        self.season = self.season_cbx.currentText()
-        if not self.shot_project_folder == 'Select Project':
-            self.sequence_cbx.clear()
-            if 'sequences' in os.listdir(project_folder):
-                seqs = '/'.join([prj_root, self.shot_project_folder,'sequences'])
-                self.sequence_cbx.addItems([sq for sq in os.listdir(seqs) if sq.startswith('E')])
-            elif 'seasons' in os.listdir(project_folder) and self.season:
-                seqs = '/'.join([prj_root, self.shot_project_folder,'seasons',self.season,'sequences'])
-                self.sequence_cbx.addItems([sq for sq in os.listdir(seqs) if sq.startswith('S')])
-
-    def get_shots(self):
-        get_step = True
-        skip = ['editorial']
-        self.shot_lst.clear()
-        self.selected = False
-        self.season = self.season_cbx.currentText()
-        self.sequence = self.sequence_cbx.currentText()
-        if not self.sequence:
+        find_text = self.find_le.text()
+        if len(find_text.strip()) <2:
             return
-        if self.season:
-            sq = '/'.join([prj_root, self.shot_project_folder,'seasons',self.season,self.sequence])
-        else:
-            sq = '/'.join([prj_root, self.shot_project_folder,'sequences',self.sequence])
-        for shot in os.listdir(sq):
-            if re.findall('(\d{2}-sh-\d{4})',shot[-10:]):
-                sht = '/'.join([sq, shot])
-                self.setItem(sht)
-                # fill step combobox
-                if get_step:
-                    get_step = False
-                    self.step_cbx.clear()
-                    self.step_cbx.addItems([step for step in os.listdir(sht) if step.islower() and not step in skip])
+        fnd = [t.strip() for t in find_text.split(' ') if t.strip()]
+
+        lst = []
+        for n in self.data:
+            if not False in [p in n for p in fnd]:
+                lst.append(n)
+
+        self.shot_lst.clear()
+        for i in lst:
+            text = '{}'.format(i)
+            self.setItem(i)
+
+        items = self.shot_lst.findItems(find_text, 1)
+        for i in items:
+            if find_text.lower() in i.text().lower():
+                self.shot_lst.setCurrentItem(i)
+                i.setSelected(True)
+                break
 
     def target_exists(self, src):
         trg = src.replace(self.shot_project_folder, '%s/outsource'%self.shot_project_folder)
@@ -198,14 +201,6 @@ class ZipManager(QWidget, zip_wgt.Ui_Form):
         for shot in files:
             self.setItem(shot)
         self.selected = True
-
-    def find_entity(self, find_text):
-        items = self.shot_lst.findItems(find_text, 1)
-        for i in items:
-            if find_text.lower() in i.text().lower():
-                self.shot_lst.setCurrentItem(i)
-                i.setSelected(True)
-                break
 
     def update_progress(self, val):
         if isinstance(val, list):
@@ -299,11 +294,36 @@ class ZipManager(QWidget, zip_wgt.Ui_Form):
         self.thread.start()
         # self.thread.setPriority(QThread.LowPriority)
 
+class FindField(QLineEdit):
+    def __init__(self, parent):
+        super(FindField, self).__init__()
+        self.p = parent
+
+    def event(self, event):
+            resend = None
+            if event.type() in [QEvent.KeyPress, QEvent.KeyRelease, QEvent.ShortcutOverride]:
+                if event.key() == Qt.Key_Escape:
+                    if self.text():
+                        self.clear()
+                        self.p.lst.close()
+                    return True
+                elif event.key() in [
+                    Qt.Key_Up,
+                    Qt.Key_Down,
+                    Qt.Key_PageUp,
+                    Qt.Key_PageDown,
+                    Qt.Key_Home,
+                    Qt.Key_End]:
+                    resend = self.p.lst.text
+            if resend:
+                return resend.event(event)
+            return super(QLineEdit, self).event(event)
+
 class Logger(QFrame):
     """docstring for Logger"""
     def __init__(self, lst, parent):
         super(Logger, self).__init__(parent)
-        self.setWindowFlags(Qt.Tool)
+        self.setWindowFlags(Qt.ToolTip)
         self.setWindowTitle('Log')
         self.setLineWidth(1)
         self.text = QTextEdit()
@@ -327,9 +347,9 @@ class Logger(QFrame):
 
 if __name__ == '__main__':
     if not os.path.exists(prj_root):
-        print prj_root
-    else:
-        app = QApplication([])
-        arc = ZipManager()
-        arc.show()
-        app.exec_()
+        print 'Can`t find this path - {}'.format(prj_root)
+    # else:
+    app = QApplication([])
+    arc = ZipManager()
+    arc.show()
+    app.exec_()
