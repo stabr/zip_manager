@@ -1,7 +1,7 @@
 QWidget {
     background-color: rgb(68,68,68);
     color: rgb(90,150,220);
-    font: 12px;
+    font: 12pt;
     /*font: 11px rgb(200,200,200);*/
 }
 QGroupBox {
