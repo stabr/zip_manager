@@ -34,7 +34,7 @@ class ZipManager(QWidget):
         
         stl = 'QWidget {color: rgb(90,150,220);font: 12pt;}'\
                'QPushButton {font: 10pt;border: 1px solid rgb(84,84,90);}'
-        # stl = os.path.join(os.path.dirname(__file__), 'wgt/style.css')
+        stl = os.path.join(os.path.dirname(__file__), 'wgt/style.css')
         self.setStyleSheet(stl)
 
         self.entitys_lay = QVBoxLayout()       
@@ -91,17 +91,21 @@ class ZipManager(QWidget):
         self.arch_btn.clicked.connect(self.archive)
         # self.log_btn.clicked.connect(lambda:self.thread.exit(0))
         self.log_btn.clicked.connect(self.get_log)
+        print '>> {}'.format(self)
+        for c in self.children():
+            print '>> {} {}'.format(c, c.objectName(), type(c))
 
 
-    def get_data(self):
+    def _get_data(self):
         root = 'C:/Autodesk/Autodesk_Maya_2018_EN_JP_ZH_Win_64bit_dlm/Setup'
         data = [root+'/'+file for file in os.listdir(root)]      
         return data
 
-    def _get_data(self):
-        # root = '//bstorage/strg01/mnt/projects'
-        entity = self.entity
-        root = amg_config.conf.get('projects_path')
+    def get_data(self):
+        root = '//bstorage/strg01/mnt/projects'
+        # entity = self.entity
+        entity = ''
+        # root = amg_config.conf.get('projects_path')
         data = []
         for prj in os.listdir(root):
             path = os.path.join(root, prj, '.dir_cache')
@@ -119,9 +123,23 @@ class ZipManager(QWidget):
         fnd = [t.strip() for t in find_text.split(' ') if t.strip()]
 
         lst = []
+        parts = []
+        tire = '[{a}{b}]'.format(
+            a = '' if '-' in find_text else '\-',
+            b = '' if '_' in find_text else '_')
+        # for n in self.data:
         for n in self.data:
-            if not False in [p in n for p in fnd]:
-                lst.append(n)
+            name = n.rsplit('/',1)[-1]
+            if re.findall(r'{f}sh{f}[0-9]{{3,4}}'.format(f=tire), name):
+                parts = [p for p in re.split(r'[\-_]sh[\-_]', name) if p]
+            elif re.findall(r'{}'.format(tire), name):
+                parts = [p for p in re.split(r'[\-_]', name) if p]
+            else:
+                parts = [name]
+            if len(parts)>=len(fnd):
+                if not False in [p in parts[i] for i,p in enumerate(fnd) if i<len(parts)]:
+                    # print '{}:\n>> {} >> {}'.format(n, name, parts)
+                    lst.append(n)
 
         self.file_lst.clear()
         for i in lst:
