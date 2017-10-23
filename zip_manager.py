@@ -108,14 +108,13 @@ class ZipManager(QWidget):
         getting list of folders of the entities
         '''
         data = []
-        root = '//bstorage/strg01/mnt/projects'
-        for prj in os.listdir(root):
-            path = os.path.join(root, prj, '.dir_cache')
+        for prj in os.listdir(prj_root):
+            path = os.path.join(prj_root, prj, '.dir_cache')
             if not os.path.exists(path):
                 continue
             with open(path, 'r') as cache:
-                fullpath = lambda x: os.path.join(root, prj, unicode(x.strip(), errors='ignore'))
-                data += [fullpath(l).replace('\\', '/') for l in cache]
+                fpath = lambda x: os.path.join(prj_root, prj, unicode(x.strip(), errors='ignore'))
+                data += [fpath(l).replace('\\', '/') for l in cache]
         return data
 
     def fill_list(self, lst):
