@@ -1,0 +1,60 @@
+import os
+import sys
+
+import pyWinhook
+import pythoncom
+
+import clipboard
+
+from PySide2.QtWidgets import *
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+
+global alt
+alt = False
+
+def OnKeyboard_DownEvent(event):
+    global alt
+
+    if event.GetKey() in ('Lwin', 'Rwin'):
+        alt = True
+    else:
+        if chr(event.Ascii) == '/' and alt:
+            clipboard.reverse_slash()
+        alt = False
+    return True
+
+def run_switcher():
+    # Instantiate HookManager class
+    hooks_manager = pyWinhook.HookManager()
+    # Listen to all keystrokes
+    hooks_manager.KeyDown = OnKeyboard_DownEvent
+    # Hook the keyboard
+    hooks_manager.HookKeyboard()
+    # Pump all messages for current thread
+    pythoncom.PumpMessages()
+
+class SlashSwitcher(QSystemTrayIcon):
+
+    def __init__(self):
+        super(SlashSwitcher, self).__init__()
+        icon = '1.png'
+        iconpxmap = QPixmap(icon)
+        self.setIcon(QIcon(iconpxmap))
+
+        exit_act = QAction('Quit', self)
+        exit_act.triggered.connect(self.deleteLater)
+
+        self.menu = QMenu('SlashSwitcherMenu')
+        self.menu.addSeparator()
+        self.menu.addAction(exit_act)
+        self.setContextMenu(self.menu)
+        self.setToolTip('Slash Switcher')
+        run_switcher()
+
+
+if __name__ == '__main__':
+    app = QApplication([])
+    brul = SlashSwitcher()
+    brul.show()
+    app.exec_()
